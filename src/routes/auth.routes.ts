@@ -74,15 +74,27 @@ app.post("/register", async (req, reply) => {
         return reply.send({ message: "Invalid password" });
       }
 
-      const token = jwt.sign(
-        { id: user.id, 
-          name: user.name,
-          email: user.email },
+      // const token = jwt.sign(
+      //   { id: user.id, 
+      //     name: user.name,
+      //     email: user.email },
         
-         process.env.JWT_SECRET!,
+      //    process.env.JWT_SECRET!,
 
-        { expiresIn: "1d" }
-      );
+      //   { expiresIn: "1d" }
+      // );
+
+      const token = jwt.sign(
+  {
+    id: user.id,
+    name: user.name,
+    email: user.email
+  },
+  process.env.JWT_SECRET!,
+  {
+    expiresIn: "1d"
+  }
+);
 
       return reply.send({
         message: "Login successful",
@@ -103,4 +115,4 @@ app.post("/register", async (req, reply) => {
     });
   });
 
-}
+}                    

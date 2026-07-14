@@ -2,6 +2,52 @@ import { FastifyInstance } from "fastify";
 import { pool } from "../config/db";
 import { authMiddleware } from "../middleware/auth.middleware";
 
+
+function detectMood(message: string) {
+
+  const text = message.toLowerCase();
+
+  if (
+    text.includes("sad") ||
+    text.includes("cry") ||
+    text.includes("depressed") ||
+    text.includes("lonely")||
+    text.includes("alone")||
+    text.includes("heavy")
+  ) {
+    return "Sad";
+  }
+
+  if (
+    text.includes("happy") ||
+    text.includes("great") ||
+    text.includes("good") ||
+    text.includes("awesome")||
+    text.includes("enthusiastic")
+  ) {
+    return "Happy";
+  }
+
+  if (
+    text.includes("anxiety") ||
+    text.includes("stress") ||
+    text.includes("worried") ||
+    text.includes("panic")
+  ) {
+    return "Anxiety";
+  }
+
+  if (
+    text.includes("angry") ||
+    text.includes("hate") ||
+    text.includes("frustrated")
+  ) {
+    return "Angry";
+  }
+
+  return "Neutral";
+}
+
 export async function chatRoutes(app: FastifyInstance) {
 
   // =========================
@@ -62,26 +108,59 @@ export async function chatRoutes(app: FastifyInstance) {
               "Content-Type": "application/json"
             },
             body: JSON.stringify({
-              model: "qwen2.5:1.5b",
+              // model: "llama3.2:3b"
+            //  model: "gemma3:4b",
+             model: "llama3.2:3b",
 
-              prompt: `
-      You are MindSathi AI.
-       You are a calm, supportive mental health assistant.
 
-       Always talk like a friendly human.
+   prompt: `
+You are MindSathi, a friendly AI mental health assistant.
 
-      User Name: ${userName}
+VERY IMPORTANT RULES:
 
-     Previous Conversation:
-     ${chatContext}
+1. Reply ONLY in the same language used by the user.
 
-     User Message:
-     ${message}
+2. If the user writes in English,
+reply in English.
 
-    Reply in simple and supportive English.
-              `,
+3. If the user writes in Marathi script (उदा. "मला खूप वाईट वाटतं"),
+reply in Marathi script.
 
-              stream: false
+4. If the user writes Marathi using English letters
+(example:
+"mla khup vait vataty"
+"mala khup sad feel hotay"
+"kasa ahes"),
+
+reply ONLY in Roman Marathi using English letters.
+
+Never translate Roman Marathi into English.
+
+Examples:
+
+User: hi
+AI: Hello! How are you today?
+
+User: I am feeling low
+AI: I'm sorry you're feeling this way. Would you like to talk about it?
+
+User: mala khup vait vataty
+AI: Mala khup vait vatatay he aikun mala vait vatla. Mi tujhya sobat aahe. Kay zala te sangshil ka?
+
+User: mi khup lonely ahe
+AI: Ekta vatnan khup avghad asta. Tu ekta nahis. Mi aikayla ithe aahe.
+
+Be supportive.
+Be empathetic.
+Keep replies short (3-5 sentences).
+
+User message:
+${message}
+`,
+              stream: false,
+               options: {
+        temperature: 0.3
+    }
             })
           }
         );
@@ -111,7 +190,18 @@ export async function chatRoutes(app: FastifyInstance) {
           `,
           [userId, message, aiReply]
         );
+const mood = detectMood(message);
 
+await pool.query(
+`
+INSERT INTO moods
+(user_id,mood,message)
+VALUES(?,?,?)
+`,
+[userId,mood,message]
+);
+
+console.log("Mood Saved:", mood);
         return reply.send({
           reply: aiReply
         });
